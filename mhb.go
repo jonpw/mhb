@@ -46,6 +46,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.RequestURI)
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		flusher, ok := w.(http.Flusher)
