@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 	"github.com/eclipse/paho.mqtt.golang"
 	"encoding/json"
 )
@@ -40,20 +41,31 @@ func main() {
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
 	}
-
+	fmt.Println("starting router")
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	cors := cors.New(cors.Options{
+	AllowedOrigins:   []string{"*"},
+	AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+	AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+	AllowCredentials: true,
+	MaxAge:           300, // Maximum value not ignored by any of major browsers
+	})
+	r.Use(cors.Handler)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.RequestURI)
+	fmt.Println("started router")
+	r.Get("/t/{topic}", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("request")
+		topic := chi.URLParam(r, "topic")
+		fmt.Println(r.RequestURI, r.Header)
 		w.Header().Set("Content-Type", "application/json")
 		enc := json.NewEncoder(w)
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			panic("expected http.ResponseWriter to be an http.Flusher")
 		}
-		if token := c.Subscribe("mhb/test", 0, nil); token.Wait() && token.Error() != nil {
+		if token := c.Subscribe(topic, 0, nil); token.Wait() && token.Error() != nil {
 			fmt.Println(token.Error())
 			os.Exit(1)
 		}		
@@ -61,6 +73,7 @@ func main() {
 			select {
 			case d := <- ch:
 				err := enc.Encode(d)
+				fmt.Println(d)
 				if err != nil {
 					log.Println("Failed to marshal data object to json stream:", err)
 				}
@@ -68,7 +81,7 @@ func main() {
 				flusher.Flush()
 			case <-r.Context().Done():
 				log.Println("Client connection closed")
-				if token := c.Unsubscribe("go-mqtt/sample"); token.Wait() && token.Error() != nil {
+				if token := c.Unsubscribe(topic); token.Wait() && token.Error() != nil {
 					fmt.Println(token.Error())
 					os.Exit(1)
 				}
