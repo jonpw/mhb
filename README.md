@@ -3,6 +3,7 @@ MQTT HTTP bridge. Intended to be compatible with Grafana streaming datasource, a
 
 Inspired by:
 https://github.com/slim-bean/leafbus from Grafaconline 2020
+
 https://github.com/ryantxu/streaming-json-datasource
 
 ## to-do
